@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="ink">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识树 · 我心中的孔子</title>
+<style>
+/* ============ 三主题 CSS 变量（FR-E12） ============ */
+:root[data-theme="ink"] {
+  --bg: #f7f3e9; --bg-panel: #fffdf6; --ink: #2b2620; --ink-soft: #6b5f4d;
+  --accent: #9e2b25; --line: #d8cfbb; --trunk: #5b4a36; --branch: #a89a7d;
+  --shadow: rgba(90, 70, 40, .18); --node-stroke: #fffdf6;
+  --font-title: "KaiTi", "STKaiti", "SimSun", serif;
+  --font-body: "SimSun", "Songti SC", serif;
+}
+:root[data-theme="modern"] {
+  --bg: #ffffff; --bg-panel: #f8fafc; --ink: #0f172a; --ink-soft: #64748b;
+  --accent: #0f766e; --line: #e2e8f0; --trunk: #334155; --branch: #94a3b8;
+  --shadow: rgba(15, 23, 42, .10); --node-stroke: #ffffff;
+  --font-title: "Segoe UI", "Microsoft YaHei", sans-serif;
+  --font-body: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+:root[data-theme="night"] {
+  --bg: #10151f; --bg-panel: #1a2233; --ink: #e8e4d8; --ink-soft: #9aa3b5;
+  --accent: #d4af37; --line: #2a3548; --trunk: #8a7a52; --branch: #4a5568;
+  --shadow: rgba(0, 0, 0, .45); --node-stroke: #10151f;
+  --font-title: "KaiTi", "STKaiti", "SimSun", serif;
+  --font-body: "SimSun", "Songti SC", serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font-family: var(--font-body); transition: background .4s, color .4s; }
+
+/* ============ 顶栏 ============ */
+#topbar {
+  position: relative; z-index: 20; min-height: 56px; flex-wrap: wrap; row-gap: 6px;
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+  background: var(--bg-panel); border-bottom: 1px solid var(--line); box-shadow: 0 2px 12px var(--shadow);
+}
+#seal {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 40px; padding: 0 8px; border-radius: 6px;
+  background: var(--accent); color: #fff; font-family: var(--font-title);
+  font-size: 20px; letter-spacing: 2px; user-select: none;
+}
+#pkgTitle { font-family: var(--font-title); font-size: 18px; white-space: nowrap; }
+#pkgDesc { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28vw; }
+.spacer { flex: 1; }
+#topbar select, #topbar input[type="search"], #topbar button, #topbar label.btn {
+  height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 13px;
+  cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 4px;
+}
+#topbar input[type="search"] { cursor: text; width: 150px; }
+#topbar button:hover, #topbar label.btn:hover, #topbar select:hover { border-color: var(--accent); color: var(--accent); }
+#topbar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ============ 画布 ============ */
+#stage { flex: 1; width: 100%; min-height: 0; display: block; cursor: grab; }
+#stage:active { cursor: grabbing; }
+#stage .link { fill: none; stroke: var(--branch); stroke-width: 2; opacity: .85; }
+#stage .stem { fill: none; stroke: var(--trunk); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
+#stage .node circle { stroke: var(--node-stroke); stroke-width: 2.5; cursor: pointer; transition: r .2s; }
+#stage .node:hover circle { filter: drop-shadow(0 0 6px var(--accent)); }
+#stage .node text { font-family: var(--font-title); fill: var(--ink); pointer-events: none; }
+#stage .node .year { font-size: 12px; fill: var(--ink-soft); font-family: var(--font-body); }
+#stage .node .label { font-size: 15px; }
+#stage .node.dim { opacity: .18; }
+#stage .node.hit circle { stroke: var(--accent); stroke-width: 4; }
+#stage .node.hit .label { fill: var(--accent); font-weight: bold; }
+#stage .fold-btn { cursor: pointer; }
+#stage .fold-btn circle { fill: var(--bg-panel); stroke: var(--branch); stroke-width: 1.5; }
+#stage .fold-btn text { font-size: 10px; fill: var(--ink-soft); }
+
+/* ============ 详情面板 ============ */
+#detail {
+  position: fixed; top: 72px; right: 16px; z-index: 15; width: 380px; max-width: 92vw;
+  max-height: calc(100vh - 96px); overflow-y: auto; padding: 20px;
+  background: var(--bg-panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 30px var(--shadow); display: none;
+}
+#detail.open { display: block; animation: slideIn .3s ease; }
+@keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+#detail h2 { font-family: var(--font-title); font-size: 22px; margin: 6px 0 2px; }
+#detail .year-badge { font-size: 12px; color: var(--ink-soft); }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 10px; color: #fff; font-size: 12px; vertical-align: 2px; margin-right: 6px; }
+#detail .summary { margin-top: 10px; line-height: 1.8; font-size: 14px; }
+#detail .excerpt { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--bg); line-height: 1.9; font-size: 13px; color: var(--ink-soft); }
+#detail h3 { font-family: var(--font-title); font-size: 15px; margin: 14px 0 6px; color: var(--accent); }
+.quote-card { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.quote-card .q { font-family: var(--font-title); font-size: 15px; }
+.quote-card .i { font-size: 12px; color: var(--ink-soft); margin-top: 4px; line-height: 1.6; }
+.person { margin-top: 6px; font-size: 13px; line-height: 1.7; }
+.person b { color: var(--accent); }
+#detailClose { position: absolute; top: 10px; right: 12px; border: none; background: none; font-size: 18px; cursor: pointer; color: var(--ink-soft); }
+
+/* ============ 编辑模式 ============ */
+#detail textarea, #detail input.ed {
+  width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 13px; margin-top: 6px;
+}
+#detail textarea { resize: vertical; min-height: 60px; line-height: 1.7; }
+.ed-row { display: flex; gap: 8px; margin-top: 10px; }
+.ed-row button { flex: 1; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); cursor: pointer; font-family: var(--font-body); }
+.ed-row button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ed-row button.danger { color: #b91c1c; }
+#editHint { position: fixed; left: 16px; bottom: 64px; z-index: 15; padding: 8px 14px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; display: none; box-shadow: 0 4px 16px var(--shadow); }
+#editHint.show { display: block; }
+
+/* ============ 提示条 ============ */
+#toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(80px);
+  z-index: 30; padding: 10px 18px; border-radius: 8px; background: var(--ink); color: var(--bg);
+  font-size: 13px; transition: transform .3s ease; max-width: 80vw; white-space: pre-line;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+/* ============ 图例与操作提示 ============ */
+#legend {
+  position: fixed; left: 16px; bottom: 16px; z-index: 14; display: flex; gap: 14px;
+  padding: 8px 14px; background: var(--bg-panel); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: 0 4px 16px var(--shadow);
+  font-size: 12px; color: var(--ink-soft); align-items: center;
+}
+#legend .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+#legend .legend-item i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+#hint { position: fixed; right: 16px; bottom: 16px; z-index: 14; font-size: 12px; color: var(--ink-soft); opacity: .75; }
+@media (max-width: 860px) { #pkgDesc { display: none; } #hint { display: none; } }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span id="seal">树</span>
+  <div>
+    <div id="pkgTitle">知识树</div>
+    <div id="pkgDesc"></div>
+  </div>
+  <div class="spacer"></div>
+  <select id="pkgSwitcher" title="主题切换"></select>
+  <select id="navSelect" title="导航跳转"><option value="">导航…</option></select>
+  <input type="search" id="searchBox" placeholder="搜索节点…">
+  <select id="themeSelect" title="视觉主题">
+    <option value="ink">水墨国风</option>
+    <option value="modern">现代简约</option>
+    <option value="night">深色暗夜</option>
+  </select>
+  <button id="editToggle" title="编辑模式">✎ 编辑</button>
+  <label class="btn" title="导入主题包 JSON">导入<input type="file" id="importFile" accept=".json,application/json" hidden></label>
+  <button id="exportBtn" title="导出当前主题包 JSON">导出</button>
+  <button id="resetView" title="复位视图">复位</button>
+</div>
+
+<svg id="stage"><g id="viewport"></g></svg>
+
+<div id="legend"></div>
+<div id="hint">滚轮缩放 · 拖拽平移 · 点击节点看详情</div>
+
+<div id="detail">
+  <button id="detailClose">✕</button>
+  <div id="detailBody"></div>
+</div>
+
+<div id="editHint">编辑模式已开启：点击节点进行编辑 · <span id="restoreBuiltin" style="text-decoration:underline;cursor:pointer">恢复内置版本</span></div>
+<div id="toast"></div>
+
+<script>/*__D3__*/</script>
+<script>/*__ENGINE__*/</script>
+<script>/*__DATA__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>
