@@ -28,7 +28,7 @@ const ui = [
   'src/ui/render-tree.js',       // renderTree + chapterColor（依赖 walk）
   'src/ui/view-controller.js',   // createViewController + 纯几何计算
 ].map((p) => strip(read(p))).join('\n');
-const app = read('src/ui/app.js');
+const app = strip(read('src/ui/app.js'));
 
 // 安全检查：内联内容不得含 </script>（会提前闭合 script 标签）
 for (const [name, payload] of [['d3', d3], ['engine', engine], ['data', data], ['ui', ui], ['app', app]]) {
