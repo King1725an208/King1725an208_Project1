@@ -72,6 +72,29 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 #stage .fold-btn circle { fill: var(--bg-panel); stroke: var(--branch); stroke-width: 1.5; }
 #stage .fold-btn text { font-size: 10px; fill: var(--ink-soft); }
 
+/* ============ LOD（层级/密度自适应） ============ */
+/* 概览：隐藏侧枝文字与折叠钮，主干文字反向放大保持可读 */
+#viewport.zoom-overview .node.branch .label,
+#viewport.zoom-overview .node.branch .year,
+#viewport.zoom-overview .node.branch .fold-btn,
+#viewport.zoom-overview .node.trunk .fold-btn { display: none; }
+#viewport.zoom-overview .node.branch circle { r: 5; opacity: .7; }
+#viewport.zoom-overview .node.trunk .label {
+  font-size: calc(18px * var(--revk, 1));
+  font-weight: bold;
+}
+#viewport.zoom-overview .node.trunk .fold-btn,
+#viewport.zoom-medium .node.trunk .fold-btn { display: none; }
+#viewport.zoom-overview .node.trunk circle { r: calc(14px * var(--revk, 1)); }
+#viewport.zoom-overview .link { opacity: .4; }
+#viewport.zoom-overview .stem { stroke-width: calc(8px * var(--revk, 1)); }
+
+/* 中等：侧枝文字缩小但保留 */
+#viewport.zoom-medium .node.branch .label { font-size: 11px; }
+#viewport.zoom-medium .node.branch .year { display: none; }
+#viewport.zoom-medium .node.branch .fold-btn { display: none; }
+#viewport.zoom-medium .node.branch circle { r: 6; }
+
 /* ============ 详情面板 ============ */
 #detail {
   position: fixed; top: 72px; right: 16px; z-index: 15; width: 380px; max-width: 92vw;
@@ -832,7 +855,9 @@ function renderTree({
   // ---------- 节点 ----------
   const node = viewport.selectAll('g.node').data(pos, (p) => p.id);
   const enter = node.enter().append('g').attr('class', 'node')
-    .attr('transform', (p) => `translate(${p.x},${p.y})`).style('opacity', 0);
+    .attr('transform', (p) => `translate(${p.x},${p.y})`).style('opacity', 0)
+    .classed('trunk', (p) => p.x === 0)
+    .classed('branch', (p) => p.x !== 0);
   enter.append('circle').attr('r', (p) => (p.x === 0 ? 12 : 8));
   enter.append('text').attr('class', 'label').attr('dy', 4);
   enter.append('text').attr('class', 'year').attr('dy', 4);
@@ -844,13 +869,14 @@ function renderTree({
   merged.select('circle').attr('fill', (p) => chapterColor(pkg, nodeById.get(p.id)?.chapter));
   merged.select('text.label')
     .text((p) => nodeById.get(p.id)?.title ?? p.id)
-    .attr('x', (p) => (p.x === 0 ? 16 : p.x > 0 ? 12 : -12))
+    .attr('x', (p) => (p.x === 0 ? 62 : p.x > 0 ? 28 : -28))
     .attr('text-anchor', (p) => (p.x === 0 ? 'start' : p.x > 0 ? 'start' : 'end'));
   merged.select('text.year')
+    .attr('class', 'year')
     .text((p) => nodeById.get(p.id)?.displayYear ?? nodeById.get(p.id)?.year ?? '')
-    .attr('x', (p) => (p.x === 0 ? -16 : p.x > 0 ? 12 : -12))
+    .attr('x', (p) => (p.x === 0 ? -62 : p.x > 0 ? 28 : -28))
     .attr('text-anchor', (p) => (p.x === 0 ? 'end' : p.x > 0 ? 'start' : 'end'))
-    .attr('dy', -12);
+    .attr('dy', 4);
 
   // 折叠钮（仅有 children 的节点）
   merged.select('g.fold-btn').each(function (p) {
@@ -885,20 +911,14 @@ function renderTree({
 }
 /* ============================================================
  * viewController — 视图控制深模块
- * 职责：fitToScreen / zoomToNode / initialView
- * 对外接口窄（3 个方法），内部封装变换计算与 D3 过渡细节。
+ * 职责：fitToScreen / zoomToNode / initialView / LOD 级别
+ * 对外接口窄，内部封装变换计算与 D3 过渡细节。
  * 纯几何计算 computeFitTransform 独立导出，可脱离浏览器单测。
  * ============================================================ */
 
 /**
  * 纯函数：计算"树干居中 + 全览/指定缩放"的变换矩阵参数。
  * 以主干（x=0）为对称轴，横向留白左右对称。
- *
- * @param {Array<{x:number,y:number}>} positions - 所有节点位置
- * @param {number} w - 视口宽度
- * @param {number} h - 视口高度
- * @param {number|'fit'} scale - 数值缩放或 'fit' 自动全览
- * @returns {{k:number, tx:number, ty:number}|null}
  */
 function computeFitTransform(positions, w, h, scale) {
   if (!positions.length) return null;
@@ -913,27 +933,26 @@ function computeFitTransform(positions, w, h, scale) {
 }
 
 /**
- * 纯函数：计算聚焦到单个节点的变换参数（1:1 缩放，节点居中）。
- *
- * @param {{x:number,y:number}} pos
- * @param {number} w
- * @param {number} h
- * @returns {{k:number, tx:number, ty:number}}
+ * 纯函数：计算聚焦到单个节点的变换参数。
  */
-function computeNodeTransform(pos, w, h) {
-  return { k: 1.0, tx: w / 2 - pos.x, ty: h / 2 - pos.y };
+function computeNodeTransform(pos, w, h, k = 1) {
+  return { k, tx: w / 2 - pos.x * k, ty: h / 2 - pos.y * k };
+}
+
+/**
+ * 根据缩放级别返回 LOD 档位：'overview' | 'medium' | 'detail'
+ * 纯函数，可单测。
+ */
+function computeLodLevel(k) {
+  if (k < 0.55) return 'overview';
+  if (k < 0.9) return 'medium';
+  return 'detail';
 }
 
 /**
  * 创建视图控制器。
- *
- * @param {object}   opts
- * @param {Selection} opts.svg     - D3 selection of the root <svg>
- * @param {object}   opts.zoom     - d3.zoom() behavior
- * @param {function():Map} opts.getPosById - 返回当前 posById 的 getter
- * @returns {{ initialView():void, fitToScreen():void, zoomToNode(id:string):void }}
  */
-function createViewController({ svg, zoom, getPosById }) {
+function createViewController({ svg, zoom, viewport, getPosById }) {
   function viewportSize() {
     const node = svg.node();
     return { w: node.clientWidth, h: node.clientHeight };
@@ -950,10 +969,35 @@ function createViewController({ svg, zoom, getPosById }) {
     return [...getPosById().values()];
   }
 
-  // 首屏：可读缩放（0.95）+ 树干居中
+  /** 根据当前节点位置设置拖拽边界，防止树被拖出视口 */
+  function setBounds(positions) {
+    if (!positions.length) return;
+    const pad = 400;
+    const xs = positions.map((p) => p.x);
+    const ys = positions.map((p) => p.y);
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad;
+    zoom.translateExtent([[minX, minY], [maxX, maxY]]);
+  }
+
+  /** 设置 LOD 档位 class 与反向缩放变量（概览时主干文字保持可读） */
+  function applyLod(k) {
+    const level = computeLodLevel(k);
+    viewport
+      .classed('zoom-overview', level === 'overview')
+      .classed('zoom-medium', level === 'medium')
+      .classed('zoom-detail', level === 'detail');
+    // 反向缩放因子：概览时放大文字以补偿整体缩小
+    const rev = level === 'overview' ? 1 / k : 1;
+    viewport.style('--revk', rev.toFixed(3));
+  }
+
+  // 首屏：整棵树全览居中
   function initialView() {
     const { w, h } = viewportSize();
-    applyTransform(computeFitTransform(currentPositions(), w, h, 0.95));
+    applyTransform(computeFitTransform(currentPositions(), w, h, 'fit'));
   }
 
   // 复位：整棵树全览
@@ -962,15 +1006,15 @@ function createViewController({ svg, zoom, getPosById }) {
     applyTransform(computeFitTransform(currentPositions(), w, h, 'fit'));
   }
 
-  // 聚焦到节点（1:1）
+  // 聚焦到节点（放大到可读级别）
   function zoomToNode(id) {
     const p = getPosById().get(id);
     if (!p) return;
     const { w, h } = viewportSize();
-    applyTransform(computeNodeTransform(p, w, h), 650);
+    applyTransform(computeNodeTransform(p, w, h, 1.3), 650);
   }
 
-  return { initialView, fitToScreen, zoomToNode };
+  return { initialView, fitToScreen, zoomToNode, setBounds, applyLod };
 }</script>
 <script>/* ============================================================
  * 知识树平台 · 薄编排层（浏览器）
@@ -1007,9 +1051,12 @@ function createViewController({ svg, zoom, getPosById }) {
   // ---------- D3 容器与视图控制器 ----------
   const svg = d3.select('#stage');
   const viewport = d3.select('#viewport');
-  const zoom = d3.zoom().scaleExtent([0.15, 3]).on('zoom', (e) => viewport.attr('transform', e.transform));
+  const zoom = d3.zoom().scaleExtent([0.2, 3]).on('zoom', (e) => {
+    viewport.attr('transform', e.transform);
+    view.applyLod(e.transform.k);
+  });
   svg.call(zoom);
-  const view = createViewController({ svg, zoom, getPosById: () => state.posById });
+  const view = createViewController({ svg, zoom, viewport, getPosById: () => state.posById });
 
   // ---------- 节点索引 ----------
   const reindex = () => {
@@ -1024,9 +1071,10 @@ function createViewController({ svg, zoom, getPosById }) {
       viewport, pkg: state.pkg, layout,
       nodeById: state.nodeById, collapsed: state.collapsed, hits: state.hits,
       onToggleCollapse: (id) => { state.collapsed.has(id) ? state.collapsed.delete(id) : state.collapsed.add(id); render(); },
-      onNodeClick: openDetail,
+      onNodeClick: (n) => { if (!state.editMode) view.zoomToNode(n.id); openDetail(n); },
     });
     state.posById = posById;
+    view.setBounds(layout.positions);
   }
 
   // ---------- 激活主题包（薄调用：registry 处理全部内部逻辑） ----------

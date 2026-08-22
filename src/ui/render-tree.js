@@ -62,7 +62,9 @@ export function renderTree({
   // ---------- 节点 ----------
   const node = viewport.selectAll('g.node').data(pos, (p) => p.id);
   const enter = node.enter().append('g').attr('class', 'node')
-    .attr('transform', (p) => `translate(${p.x},${p.y})`).style('opacity', 0);
+    .attr('transform', (p) => `translate(${p.x},${p.y})`).style('opacity', 0)
+    .classed('trunk', (p) => p.x === 0)
+    .classed('branch', (p) => p.x !== 0);
   enter.append('circle').attr('r', (p) => (p.x === 0 ? 12 : 8));
   enter.append('text').attr('class', 'label').attr('dy', 4);
   enter.append('text').attr('class', 'year').attr('dy', 4);
@@ -74,13 +76,14 @@ export function renderTree({
   merged.select('circle').attr('fill', (p) => chapterColor(pkg, nodeById.get(p.id)?.chapter));
   merged.select('text.label')
     .text((p) => nodeById.get(p.id)?.title ?? p.id)
-    .attr('x', (p) => (p.x === 0 ? 16 : p.x > 0 ? 12 : -12))
+    .attr('x', (p) => (p.x === 0 ? 62 : p.x > 0 ? 28 : -28))
     .attr('text-anchor', (p) => (p.x === 0 ? 'start' : p.x > 0 ? 'start' : 'end'));
   merged.select('text.year')
+    .attr('class', 'year')
     .text((p) => nodeById.get(p.id)?.displayYear ?? nodeById.get(p.id)?.year ?? '')
-    .attr('x', (p) => (p.x === 0 ? -16 : p.x > 0 ? 12 : -12))
+    .attr('x', (p) => (p.x === 0 ? -62 : p.x > 0 ? 28 : -28))
     .attr('text-anchor', (p) => (p.x === 0 ? 'end' : p.x > 0 ? 'start' : 'end'))
-    .attr('dy', -12);
+    .attr('dy', 4);
 
   // 折叠钮（仅有 children 的节点）
   merged.select('g.fold-btn').each(function (p) {

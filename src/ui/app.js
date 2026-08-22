@@ -34,9 +34,12 @@ import { createPackageRegistry, createLocalStorageAdapter } from '../engine/pack
   // ---------- D3 容器与视图控制器 ----------
   const svg = d3.select('#stage');
   const viewport = d3.select('#viewport');
-  const zoom = d3.zoom().scaleExtent([0.15, 3]).on('zoom', (e) => viewport.attr('transform', e.transform));
+  const zoom = d3.zoom().scaleExtent([0.2, 3]).on('zoom', (e) => {
+    viewport.attr('transform', e.transform);
+    view.applyLod(e.transform.k);
+  });
   svg.call(zoom);
-  const view = createViewController({ svg, zoom, getPosById: () => state.posById });
+  const view = createViewController({ svg, zoom, viewport, getPosById: () => state.posById });
 
   // ---------- 节点索引 ----------
   const reindex = () => {
@@ -51,9 +54,10 @@ import { createPackageRegistry, createLocalStorageAdapter } from '../engine/pack
       viewport, pkg: state.pkg, layout,
       nodeById: state.nodeById, collapsed: state.collapsed, hits: state.hits,
       onToggleCollapse: (id) => { state.collapsed.has(id) ? state.collapsed.delete(id) : state.collapsed.add(id); render(); },
-      onNodeClick: openDetail,
+      onNodeClick: (n) => { if (!state.editMode) view.zoomToNode(n.id); openDetail(n); },
     });
     state.posById = posById;
+    view.setBounds(layout.positions);
   }
 
   // ---------- 激活主题包（薄调用：registry 处理全部内部逻辑） ----------
