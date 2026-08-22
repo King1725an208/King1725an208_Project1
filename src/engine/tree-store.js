@@ -5,14 +5,18 @@
  *  - storage：localStorage 兼容适配器（测试注入内存版）；传 null 则仅内存编辑
  *  - 每次编辑操作后自动持久化（FR-E08/09）
  */
+import { walk } from './walk.js';
+
 export function createTreeStore(pkg, storage, storageKey) {
-  const findNode = (nodes, id) => {
-    for (const node of nodes ?? []) {
-      if (node.id === id) return node;
-      const hit = findNode(node.children, id);
-      if (hit) return hit;
-    }
-    return null;
+  const findNode = (id) => {
+    let found = null;
+    walk(pkg.nodes, (node) => {
+      if (node.id === id) {
+        found = node;
+        return false; // 命中，中断遍历
+      }
+    });
+    return found;
   };
 
   const persist = () => {
@@ -23,31 +27,30 @@ export function createTreeStore(pkg, storage, storageKey) {
     getPackage: () => pkg,
 
     addNode(parentId, node) {
-      const parent = findNode(pkg.nodes, parentId);
+      const parent = findNode(parentId);
       if (!parent) throw new Error(`父节点不存在: ${parentId}`);
-      parent.children = Array.isArray(parent.children) ? parent.children : [];
+      if (!Array.isArray(parent.children)) parent.children = [];
       parent.children.push(node);
       persist();
     },
 
     updateNode(nodeId, patch) {
-      const node = findNode(pkg.nodes, nodeId);
+      const node = findNode(nodeId);
       if (!node) throw new Error(`节点不存在: ${nodeId}`);
       Object.assign(node, patch);
       persist();
     },
 
     removeNode(nodeId) {
-      const removeFrom = (nodes) => {
-        if (!Array.isArray(nodes)) return false;
-        const index = nodes.findIndex((n) => n.id === nodeId);
-        if (index >= 0) {
-          nodes.splice(index, 1); // 连同其子树一起移除
-          return true;
+      let removed = false;
+      walk(pkg.nodes, (node, ctx) => {
+        if (node.id === nodeId) {
+          ctx.parentArray.splice(ctx.index, 1);
+          removed = true;
+          return false; // 连同其子树一起移除，中断遍历
         }
-        return nodes.some((n) => removeFrom(n.children));
-      };
-      if (!removeFrom(pkg.nodes)) throw new Error(`节点不存在: ${nodeId}`);
+      });
+      if (!removed) throw new Error(`节点不存在: ${nodeId}`);
       persist();
     },
   };
