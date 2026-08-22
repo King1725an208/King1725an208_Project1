@@ -72,6 +72,29 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 #stage .fold-btn circle { fill: var(--bg-panel); stroke: var(--branch); stroke-width: 1.5; }
 #stage .fold-btn text { font-size: 10px; fill: var(--ink-soft); }
 
+/* ============ LOD（层级/密度自适应） ============ */
+/* 概览：隐藏侧枝文字与折叠钮，主干文字反向放大保持可读 */
+#viewport.zoom-overview .node.branch .label,
+#viewport.zoom-overview .node.branch .year,
+#viewport.zoom-overview .node.branch .fold-btn,
+#viewport.zoom-overview .node.trunk .fold-btn { display: none; }
+#viewport.zoom-overview .node.branch circle { r: 5; opacity: .7; }
+#viewport.zoom-overview .node.trunk .label {
+  font-size: calc(18px * var(--revk, 1));
+  font-weight: bold;
+}
+#viewport.zoom-overview .node.trunk .fold-btn,
+#viewport.zoom-medium .node.trunk .fold-btn { display: none; }
+#viewport.zoom-overview .node.trunk circle { r: calc(14px * var(--revk, 1)); }
+#viewport.zoom-overview .link { opacity: .4; }
+#viewport.zoom-overview .stem { stroke-width: calc(8px * var(--revk, 1)); }
+
+/* 中等：侧枝文字缩小但保留 */
+#viewport.zoom-medium .node.branch .label { font-size: 11px; }
+#viewport.zoom-medium .node.branch .year { display: none; }
+#viewport.zoom-medium .node.branch .fold-btn { display: none; }
+#viewport.zoom-medium .node.branch circle { r: 6; }
+
 /* ============ 详情面板 ============ */
 #detail {
   position: fixed; top: 72px; right: 16px; z-index: 15; width: 380px; max-width: 92vw;
