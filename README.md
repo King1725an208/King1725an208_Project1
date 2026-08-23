@@ -1,6 +1,96 @@
-# King1725an208_Project1
-Project1 is a study and create my first github
+# 知识树平台
 
-Check update if apply on github
+> 离线单文件知识树平台：通用引擎 + 可插拔主题包。首个内置主题为《我心中的孔子》。
 
-Check branch if working
+## 简介
+
+本项目是一个基于浏览器的离线知识树渲染引擎。核心目标是：把任意按时间演化的知识主题（历史人物、家族史、学科脉络等）渲染成一棵可缩放、可交互、可编辑的知识树。
+
+- **引擎与数据解耦**：引擎不绑定任何主题内容，只负责读取标准 JSON 主题包并渲染。
+- **离线可用**：构建产物为单个 `index.html`，内嵌 D3.js，双击即可打开，无需网络。
+- **可扩展**：按 `SCHEMA.md` 编写新的主题包 JSON，导入后即可渲染新主题。
+
+## 目录说明
+
+```
+.
+├── index.html              # 构建产物：单文件离线应用（引擎 + 内置主题数据）
+├── build.mjs               # 构建脚本：把 src/ 下源码与主题数据打包为 index.html
+├── package.json            # 项目配置、脚本命令
+├── README.md               # 本文件
+├── Requirement.md          # 需求文档（v2.0 平台化说明）
+├── SCHEMA.md               # 主题包 JSON 格式说明
+├── src/
+│   ├── data/
+│   │   └── confucius.js    # 内置示例主题包：《我心中的孔子》（章节、导航、节点、时间轴）
+│   ├── engine/             # 引擎核心：布局、校验、搜索、导入导出、树遍历、持久化
+│   │   ├── layout.js       # 知识树布局：单时间主轴 + 侧枝展开，输出 { positions, links }
+│   │   ├── package-registry.js  # 主题包注册表：内置/导入/编辑态管理 + localStorage 适配
+│   │   ├── schema.js       # 主题包 JSON Schema 校验
+│   │   ├── search.js       # 节点关键词搜索（标题/摘要/原文节选/人物注）
+│   │   ├── transfer.js     # 主题包导入/导出（JSON 文本 ↔ 文件）
+│   │   ├── tree-store.js   # 节点 CRUD：增删改查子树、自动持久化
+│   │   └── walk.js         # 通用树遍历工具（深度优先 + 祖先/父节点/路径上下文）
+│   ├── ui/                 # 浏览器端 UI 层
+│   │   ├── app.js          # 应用薄编排层：状态管理、事件绑定、串联 renderTree 与 viewController
+│   │   ├── render-tree.js  # D3 渲染深模块：节点/连线 enter-update-exit、折叠展开、搜索高亮
+│   │   ├── template.html   # 单页 HTML 模板，构建时注入引擎与主题数据
+│   │   └── view-controller.js   # 视图控制：fitToScreen、zoomToNode、LOD 级别、变换计算
+│   └── vendor/
+│       └── d3.min.js       # 内嵌 D3.js，确保离线可用
+└── test/                   # 单元测试
+```
+
+## 环境要求
+
+- [Node.js](https://nodejs.org/) 18 或更高版本
+- 现代浏览器（Chrome / Edge 优先）
+
+## 常用命令
+
+```bash
+# 安装依赖（如需新增依赖时使用；当前项目零运行时依赖）
+npm install
+
+# 运行单元测试
+npm test
+
+# 构建单文件 index.html
+npm run build
+
+# 本地预览构建产物
+# 方式 1：直接用浏览器打开
+start index.html
+
+# 方式 2：启动本地 HTTP 服务器（推荐，避免 file:// 协议限制）
+npx serve .
+```
+
+## 如何预览
+
+1. 运行 `npm run build` 生成最新 `index.html`。
+2. 用浏览器打开 `index.html` 即可查看《我心中的孔子》知识树。
+3. 首次打开会看到全局骨架视图，可缩放、拖拽、点击节点查看详情。
+
+## 如何制作新主题包
+
+1. 阅读 `SCHEMA.md`，了解主题包的字段结构。
+2. 准备主题数据：主题元信息、章节、节点（年份、标题、摘要、原文节选、金句等）。
+3. 将数据保存为合法 JSON 文件。
+4. 在应用内使用「导入主题包」按钮导入，或使用 `build.mjs` 将其固化为新的内置主题。
+
+## 主要功能
+
+- 数据驱动的单时间主轴知识树渲染
+- 首屏全局骨架视图，双击复位
+- 缩放 / 拖拽平移
+- 节点点击展开详情卡，子树折叠 / 展开
+- 关键词搜索并聚焦定位
+- 导航菜单跳转
+- 页内编辑模式（localStorage 自动保存）
+- 主题包导入 / 导出 / 校验
+- 三套视觉主题切换（水墨国风、现代简约、深色暗夜）
+
+## 许可证
+
+本项目为个人学习与实践项目，主题内容《鲁国_孔子_溯源.docx》为原作者自有。
