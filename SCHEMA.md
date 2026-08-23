@@ -96,3 +96,4 @@
 4. 定稿后可替换 `index.html` 内嵌数据区形成新的内置版本（FR-E13）。
 
 ## 7. Study
+MAke a trial for 完整练习流程：分支关联 Issue + commit 绑定 #5
