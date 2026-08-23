@@ -1,0 +1,19 @@
+# npm依赖
+node_modules/
+
+# 构建输出产物
+dist/
+build-output/
+
+# 日志文件
+*.log
+
+# vscode缓存
+.vscode/.cache
+
+# mac系统文件
+.DS_Store
+
+# 操作系统、编辑器临时文件
+*.tmp
+*.swp
