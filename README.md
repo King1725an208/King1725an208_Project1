@@ -21,9 +21,23 @@
 ├── Requirement.md          # 需求文档（v2.0 平台化说明）
 ├── SCHEMA.md               # 主题包 JSON 格式说明
 ├── src/
-│   ├── data/               # 内置主题数据（首个主题：Confucius）
-│   ├── engine/             # 引擎核心：布局、渲染、交互、编辑、持久化、主题切换
-│   └── ui/                 # UI 组件：节点渲染、详情卡、搜索、导航、顶栏
+│   ├── data/
+│   │   └── confucius.js    # 内置示例主题包：《我心中的孔子》（章节、导航、节点、时间轴）
+│   ├── engine/             # 引擎核心：布局、校验、搜索、导入导出、树遍历、持久化
+│   │   ├── layout.js       # 知识树布局：单时间主轴 + 侧枝展开，输出 { positions, links }
+│   │   ├── package-registry.js  # 主题包注册表：内置/导入/编辑态管理 + localStorage 适配
+│   │   ├── schema.js       # 主题包 JSON Schema 校验
+│   │   ├── search.js       # 节点关键词搜索（标题/摘要/原文节选/人物注）
+│   │   ├── transfer.js     # 主题包导入/导出（JSON 文本 ↔ 文件）
+│   │   ├── tree-store.js   # 节点 CRUD：增删改查子树、自动持久化
+│   │   └── walk.js         # 通用树遍历工具（深度优先 + 祖先/父节点/路径上下文）
+│   ├── ui/                 # 浏览器端 UI 层
+│   │   ├── app.js          # 应用薄编排层：状态管理、事件绑定、串联 renderTree 与 viewController
+│   │   ├── render-tree.js  # D3 渲染深模块：节点/连线 enter-update-exit、折叠展开、搜索高亮
+│   │   ├── template.html   # 单页 HTML 模板，构建时注入引擎与主题数据
+│   │   └── view-controller.js   # 视图控制：fitToScreen、zoomToNode、LOD 级别、变换计算
+│   └── vendor/
+│       └── d3.min.js       # 内嵌 D3.js，确保离线可用
 └── test/                   # 单元测试
 ```
 
