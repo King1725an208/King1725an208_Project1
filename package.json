@@ -5,7 +5,9 @@
   "private": true,
   "description": "离线单文件知识树平台：通用引擎 + 可插拔主题包（首个主题：我心中的孔子）",
   "scripts": {
+    "lint": "node lint.mjs",
     "test": "node --test test/**/*.test.js",
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "check": "npm run lint && npm run test && npm run build"
   }
 }
